@@ -2,7 +2,7 @@
 
 Ez a leírás a dwyt AI-router első telepítését írja le egy mindig bekapcsolt Linux-gépre (Debian 12, például Proxmox LXC). Az AI-routeren két szolgáltatás fut:
 
-- **llama-swap:** egyedül ő birtokolja a GPU-t. Sorba állítja a kéréseket, és a GPU-gép ([dwyt-gpu](https://github.com/kzkz22/dwyt-gpu)) konténereit egyenként indítja és állítja le.
+- **llama-swap:** egyedül ő birtokolja a GPU-t. Sorba állítja a kéréseket, és a GPU-gép ([skipwise-gpu](https://github.com/kzkz22/skipwise-gpu)) konténereit egyenként indítja és állítja le.
 - **LiteLLM:** ajánlott, de elhagyható. Stabil modellneveket és felhős tartalékot ad.
 
 A futtató ([dwyt-runner](https://github.com/kzkz22/dwyt-runner)) és a többi kliens (OpenCode, Hermes, Open WebUI) ide kapcsolódik. A frissítés: [frissites.md](frissites.md). A terv: [dwyt-docs, 9. fejezet](https://github.com/kzkz22/dwyt-docs/blob/main/docs/terv.md).
@@ -24,7 +24,7 @@ useradd --system --home-dir /var/lib/dwyt-airouter --create-home --shell /usr/sb
 install -d -m 755 /opt/dwyt-airouter/bin /etc/dwyt-airouter /etc/dwyt-airouter/generated
 
 python3 -m venv /opt/dwyt-airouter/venv
-/opt/dwyt-airouter/venv/bin/pip install git+https://github.com/kzkz22/dwyt-airouter
+/opt/dwyt-airouter/venv/bin/pip install git+https://github.com/kzkz22/skipwise-airouter
 ln -sf /opt/dwyt-airouter/venv/bin/dwyt-airouter /usr/local/bin/dwyt-airouter
 dwyt-airouter --version
 ```
@@ -50,7 +50,7 @@ Ha nem kell, a `models.yaml`-ban legyen `litellm: {enabled: false}`. Ekkor felh�
 
 ```bash
 curl -sSfL -o /etc/dwyt-airouter/models.yaml \
-  https://raw.githubusercontent.com/kzkz22/dwyt-airouter/main/models.example.yaml
+  https://raw.githubusercontent.com/kzkz22/skipwise-airouter/main/models.example.yaml
 nano /etc/dwyt-airouter/models.yaml
 ```
 
@@ -122,7 +122,7 @@ EOF
 grep LITELLM_MASTER_KEY /etc/dwyt-airouter/litellm.env     # a klienseknek ez kell
 
 for f in dwyt-llama-swap dwyt-litellm; do
-  curl -sSfL -o /etc/systemd/system/$f.service https://raw.githubusercontent.com/kzkz22/dwyt-airouter/main/deploy/$f.service
+  curl -sSfL -o /etc/systemd/system/$f.service https://raw.githubusercontent.com/kzkz22/skipwise-airouter/main/deploy/$f.service
 done
 /opt/dwyt-airouter/bin/llama-swap -config /etc/dwyt-airouter/generated/llama-swap.yaml -validate
 systemctl daemon-reload

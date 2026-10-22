@@ -1,9 +1,15 @@
 # Az AI-router frissítése
 
+## A repó új neve (2026. október)
+
+A repó `kzkz22/skipwise-airouter` lett (korábban `dwyt-airouter`). A GitHub a régi címről átirányít, így a régi
+frissítőparancs is működik. A telepített rendszeren semmi nem változik: a parancs (`dwyt-airouter`), a mappa
+(`/opt/dwyt-airouter`), a szolgáltatások (`dwyt-llama-swap`, `dwyt-litellm`) és a konténernevek maradnak.
+
 ## A program
 
 ```bash
-/opt/dwyt-airouter/venv/bin/pip install --force-reinstall --no-deps git+https://github.com/kzkz22/dwyt-airouter
+/opt/dwyt-airouter/venv/bin/pip install --force-reinstall --no-deps git+https://github.com/kzkz22/skipwise-airouter
 dwyt-airouter --version        # az új változat száma
 dwyt-airouter generate         # új változat új beállításokat írhat
 systemctl restart dwyt-litellm # ha a generate szerint a litellm.yaml változott

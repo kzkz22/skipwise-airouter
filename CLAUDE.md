@@ -28,6 +28,10 @@ file names such as `mmproj-F16.gguf`); models.ini points there. `chat-template-k
 Pinned: llama-swap v262 (docs, CI `-validate`), LiteLLM 1.104.2. `llama-swap.yaml` keeps `${PID}` literal for
 llama-swap's macro. Without LiteLLM, stable names become llama-server presets (no fallback).
 
+Repository: kzkz22/skipwise-airouter (renamed from dwyt-airouter, decision 19.19). Only the repository name and links
+changed: commands, package names, folders, services, containers and images keep their dwyt names, because the
+owner's LXCs run them by those names. Never rename them without a migration.
+
 ## Conventions
 
 - The owner writes in Hungarian. User-facing docs (`README.md`, `docs/`) and any UI are Hungarian;

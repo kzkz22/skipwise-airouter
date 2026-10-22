@@ -1,8 +1,8 @@
-# dwyt-airouter
+# skipwise-airouter
 
-A **dwyt** AI-routere egy mindig bekapcsolt gépre. Két program fut rajta:
+A **Skipwise** AI-routere egy mindig bekapcsolt gépre. Két program fut rajta:
 
-- **llama-swap:** egyedül birtokolja a GPU-t, sorba állítja a kéréseket, és indítja vagy leállítja a GPU-gép ([dwyt-gpu](https://github.com/kzkz22/dwyt-gpu)) konténereit.
+- **llama-swap:** egyedül birtokolja a GPU-t, sorba állítja a kéréseket, és indítja vagy leállítja a GPU-gép ([skipwise-gpu](https://github.com/kzkz22/skipwise-gpu)) konténereit.
 - **LiteLLM:** stabil modellneveket és felhős tartalékot ad a futtatónak és a többi kliensnek (OpenCode, Hermes, Open WebUI).
 
 Egy Whisper-munka egyetlen hosszú kérés a llama-swapon át. Amíg tart, a GPU a Whisperé, az LLM-kérések várnak.
