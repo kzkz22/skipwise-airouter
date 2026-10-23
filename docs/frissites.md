@@ -19,6 +19,8 @@ A llama-swap a `--watch-config` miatt magától újratölti a `llama-swap.yaml`-
 
 ## Modellek módosítása
 
+Részletesen, a Skipwise-beli kipróbálással és modellajánlással: [modellek.md](modellek.md).
+
 1. `nano /etc/dwyt-airouter/models.yaml`, majd `dwyt-airouter generate`.
 2. Ha a `models.ini` vagy a `downloads.json` változott: másold át a GPU-gépre, és ott futtasd a `dwyt-gpu download`-ot (dwyt-gpu, frissites.md).
 3. Ha a `litellm.yaml` változott: `systemctl restart dwyt-litellm`.

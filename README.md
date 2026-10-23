@@ -11,7 +11,7 @@ Egy Whisper-munka egyetlen hosszú kérés a llama-swapon át. Amíg tart, a GPU
 - **Indítók:** helyi Docker, Docker SSH-n át, Unraid API. Opcionális ébresztés (Wake-on-LAN): ha a GPU-gép nem válaszol, felkelti, és megvárja.
 - **llama.cpp router módban:** egy llama-server konténer, a presetek közötti váltás nem indítja újra.
 
-Telepítés: [docs/telepites.md](docs/telepites.md) · frissítés: [docs/frissites.md](docs/frissites.md) · terv: [dwyt-docs, 9. fejezet](https://github.com/kzkz22/dwyt-docs/blob/main/docs/terv.md)
+Telepítés: [docs/telepites.md](docs/telepites.md) · frissítés: [docs/frissites.md](docs/frissites.md) · modellek (új modell, ajánlás): [docs/modellek.md](docs/modellek.md) · terv: [dwyt-docs, 9. fejezet](https://github.com/kzkz22/dwyt-docs/blob/main/docs/terv.md)
 
 ## Parancsok
 
