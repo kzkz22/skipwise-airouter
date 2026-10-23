@@ -10,8 +10,8 @@ A futtató ([dwyt-runner](https://github.com/kzkz22/dwyt-runner)) és a többi k
 | Elem | Hol | Port |
 | --- | --- | --- |
 | `dwyt-airouter` program (beállításkészítő, indítók) | `/opt/dwyt-airouter/venv` | – |
-| llama-swap (v262) | `/opt/dwyt-airouter/bin/llama-swap`, szolgáltatás: `dwyt-llama-swap` | 8080 |
-| LiteLLM (1.104.2) | `/opt/dwyt-airouter/litellm`, szolgáltatás: `dwyt-litellm` | 4000 |
+| llama-swap (v266) | `/opt/dwyt-airouter/bin/llama-swap`, szolgáltatás: `dwyt-llama-swap` | 8080 |
+| LiteLLM (1.106.2) | `/opt/dwyt-airouter/litellm`, szolgáltatás: `dwyt-litellm` | 4000 |
 | beállítások | `/etc/dwyt-airouter/models.yaml`, `airouter.env`, `litellm.env`, `generated/` | – |
 
 A portok a `models.yaml` végén átírhatók. Ez akkor kell, ha a gépen már fut egy másik llama-swap vagy LiteLLM, például a régi rendszeré. A nagybetűs részeket (`AI-ROUTER-IP`, `GPU-IP`) cseréld a saját értékeidre.
@@ -32,7 +32,7 @@ dwyt-airouter --version
 ## 2. llama-swap
 
 ```bash
-curl -sSfL https://github.com/mostlygeek/llama-swap/releases/download/v262/llama-swap_262_linux_amd64.tar.gz \
+curl -sSfL https://github.com/mostlygeek/llama-swap/releases/download/v266/llama-swap_266_linux_amd64.tar.gz \
   | tar xz -C /opt/dwyt-airouter/bin llama-swap
 /opt/dwyt-airouter/bin/llama-swap -version
 ```
@@ -41,7 +41,7 @@ curl -sSfL https://github.com/mostlygeek/llama-swap/releases/download/v262/llama
 
 ```bash
 python3 -m venv /opt/dwyt-airouter/litellm
-/opt/dwyt-airouter/litellm/bin/pip install 'litellm[proxy]==1.104.2'
+/opt/dwyt-airouter/litellm/bin/pip install 'litellm[proxy]==1.106.2'
 ```
 
 Ha nem kell, a `models.yaml`-ban legyen `litellm: {enabled: false}`. Ekkor felhős modell és tartalék nincs, a stabil nevekből (például `osszefoglalo-helyi`) presetek lesznek.

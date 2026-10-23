@@ -25,7 +25,7 @@ real (faked-ML) Whisper worker; not yet run against a real GPU host. Source of t
 GGUF files live on the GPU host under `gguf/<owner>/<repo>/<path>` (downloads.json version 2; repos often share
 file names such as `mmproj-F16.gguf`); models.ini points there. `chat-template-kwargs` is a JSON object string.
 
-Pinned: llama-swap v262 (docs, CI `-validate`), LiteLLM 1.104.2. `llama-swap.yaml` keeps `${PID}` literal for
+Pinned: llama-swap v266 (docs, CI `-validate`; v262 → v266 checked: same config, aliases, swaps, a 300 MB /upstream body still passes — /upstream has no body cap), LiteLLM 1.106.2 (checked against the generated config: names, model_info.dwyt, streaming, fallbacks). `llama-swap.yaml` keeps `${PID}` literal for
 llama-swap's macro. Without LiteLLM, stable names become llama-server presets (no fallback).
 
 Repository: kzkz22/skipwise-airouter (renamed from dwyt-airouter, decision 19.19). Only the repository name and links

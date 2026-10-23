@@ -29,7 +29,7 @@ uv venv && uv pip install -e ".[test]"
 uv run pytest -q
 ```
 
-A tesztek a `docker` parancsot és az Unraid API-t utánozzák. Ha a `LLAMA_SWAP_BIN` egy llama-swap programra mutat, a generált beállítást azzal is ellenőrzik (a CI a v262-vel).
+A tesztek a `docker` parancsot és az Unraid API-t utánozzák. Ha a `LLAMA_SWAP_BIN` egy llama-swap programra mutat, a generált beállítást azzal is ellenőrzik (a CI a v266-tal).
 
 ## Licenc
 

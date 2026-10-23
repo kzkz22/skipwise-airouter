@@ -66,28 +66,81 @@ KEY=$(sed -n 's/^LITELLM_MASTER_KEY=//p' /etc/dwyt-airouter/litellm.env)
 curl -s -H "Authorization: Bearer $KEY" http://127.0.0.1:4000/v1/model/info | python3 -m json.tool | grep -A4 '"dwyt"'
 ```
 
+## Mielőtt a llama-swapot vagy a LiteLLM-et frissíted
+
+A beállításaid nem a programokban vannak, hanem az `/etc/dwyt-airouter` mappában (`models.yaml`, `airouter.env`,
+`litellm.env`, `generated/`). A lenti lépések ehhez nem nyúlnak: csak a llama-swap programfájlját és a LiteLLM
+Python-csomagjait cserélik. A biztonság kedvéért mégis:
+
+1. Futó munka ne legyen (a dwyt Munkák oldalán semmi „fut” állapotban): az újraindítás megszakítaná.
+2. Pillanatkép a Proxmoxon (a gazdagépen; a `CT` az AI-router konténerének száma):
+
+   ```bash
+   pct snapshot CT frissites-elott
+   ```
+
+   Ha bármi elromlik: `pct rollback CT frissites-elott`, és minden pontosan olyan, mint előtte.
+   Ha jó lett, pár nap múlva törölheted: `pct delsnapshot CT frissites-elott`.
+3. A konténerben mentsd el a beállításokat és a mostani állapotot (ebből a pillanatkép nélkül is visszaállsz):
+
+   ```bash
+   D=/root/airouter-mentes-$(date +%Y%m%d)
+   mkdir -p $D
+   tar czf $D/etc-dwyt-airouter.tgz /etc/dwyt-airouter /etc/systemd/system/dwyt-*.service
+   cp -p /opt/dwyt-airouter/bin/llama-swap $D/llama-swap.regi
+   /opt/dwyt-airouter/litellm/bin/pip freeze > $D/litellm-csomagok.txt
+   /opt/dwyt-airouter/bin/llama-swap --version; /opt/dwyt-airouter/litellm/bin/pip show litellm | grep ^Version
+   ```
+
 ## llama-swap
 
-A kipróbált változat a v262. Újabbra váltás:
+A kipróbált változat a v266 (a v262-höz képest a beállítás nem változott; a dwyt-airouter tesztjei és egy
+élő próba – modellváltás, aliasnév, 300 MB-os feltöltés a Whisperhez az `/upstream` úton – ugyanúgy futnak).
+Frissítés:
 
 ```bash
-V=263   # az új változat száma
+V=266
+rm -rf /tmp/llama-swap-uj && mkdir /tmp/llama-swap-uj
 curl -sSfL https://github.com/mostlygeek/llama-swap/releases/download/v$V/llama-swap_${V}_linux_amd64.tar.gz \
-  | tar xz -C /tmp llama-swap
-/tmp/llama-swap -config /etc/dwyt-airouter/generated/llama-swap.yaml -validate
-install -m 755 /tmp/llama-swap /opt/dwyt-airouter/bin/llama-swap && systemctl restart dwyt-llama-swap
+  | tar xz -C /tmp/llama-swap-uj llama-swap
+/tmp/llama-swap-uj/llama-swap --version
+/tmp/llama-swap-uj/llama-swap -config /etc/dwyt-airouter/generated/llama-swap.yaml -validate   # hiba = állj meg
+install -m 755 /tmp/llama-swap-uj/llama-swap /opt/dwyt-airouter/bin/llama-swap
+systemctl restart dwyt-llama-swap
+systemctl status dwyt-llama-swap --no-pager | head -5
+curl -s http://127.0.0.1:8080/v1/models | head -c 300; echo
 ```
 
-Visszaállás: ugyanígy a v262-vel.
+Visszaállás: `install -m 755 $D/llama-swap.regi /opt/dwyt-airouter/bin/llama-swap && systemctl restart dwyt-llama-swap`
+(a `$D` a fenti mentés mappája).
 
 ## LiteLLM
 
-A rögzített változat az 1.104.2. Újabbra váltás:
+A kipróbált változat az 1.106.2 (a generált `litellm.yaml`-lal ugyanúgy működik, mint az 1.104.2: a nevek, a
+`model_info.dwyt` leírások, a folyamként kért válasz és a felhős tartalék, ha a helyi szerver nem válaszol).
+Frissítés:
 
 ```bash
-/opt/dwyt-airouter/litellm/bin/pip install 'litellm[proxy]==ÚJ-VÁLTOZAT'
+/opt/dwyt-airouter/litellm/bin/pip install 'litellm[proxy]==1.106.2'
 systemctl restart dwyt-litellm
-journalctl -u dwyt-litellm -n 50     # indult-e hiba nélkül
+journalctl -u dwyt-litellm -n 50 --no-pager     # indult-e hiba nélkül
+KEY=$(sed -n 's/^LITELLM_MASTER_KEY=//p' /etc/dwyt-airouter/litellm.env)
+curl -s -H "Authorization: Bearer $KEY" http://127.0.0.1:4000/v1/models | python3 -m json.tool | grep '"id"'
+curl -s -H "Authorization: Bearer $KEY" http://127.0.0.1:4000/v1/chat/completions -H 'Content-Type: application/json' \
+  -d '{"model": "kerdes", "messages": [{"role": "user", "content": "Mondj egy szót!"}]}' | head -c 400; echo
 ```
 
-Visszaállás: `pip install 'litellm[proxy]==1.104.2'` és újraindítás.
+A neveknek ugyanazoknak kell lenniük, mint előtte, és a próbakérdésre válasznak kell jönnie. Ha a GPU-gép ki
+van kapcsolva, a `kerdes` a felhős tartalékból válaszol – ez is jó jel.
+
+Visszaállás (pontosan a régi csomagokkal):
+
+```bash
+/opt/dwyt-airouter/litellm/bin/pip install -r $D/litellm-csomagok.txt
+systemctl restart dwyt-litellm
+```
+
+## A dwyt futtatója a frissítés után
+
+A futtató óránként újra lekéri a modellek leírását, és a központ Futtatók oldala ebből mutatja őket. Ha azonnal
+látni akarod, indítsd újra a futtatót; utána egy kérdés vagy összefoglaló a dwyt-ben a teljes utat kipróbálja.

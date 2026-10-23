@@ -20,7 +20,7 @@ jobs:
       - run: uv run --no-sync ruff check --select F,E,W dwyt_airouter tests
       - name: llama-swap (the version the docs install) to validate the generated config
         run: |
-          curl -sSfL https://github.com/mostlygeek/llama-swap/releases/download/v262/llama-swap_262_linux_amd64.tar.gz | tar xz -C /tmp llama-swap
+          curl -sSfL https://github.com/mostlygeek/llama-swap/releases/download/v266/llama-swap_266_linux_amd64.tar.gz | tar xz -C /tmp llama-swap
           echo "LLAMA_SWAP_BIN=/tmp/llama-swap" >> "$GITHUB_ENV"
       - run: uv run --no-sync pytest -q
   audit:
