@@ -54,6 +54,17 @@ A dwyt központjában feltett kérdésekhez a futtató a `kerdes` nevet használ
 
 Utána `dwyt-airouter generate`, `systemctl restart dwyt-litellm`, a futtatón `dwyt-runner config set llm_ask_model kerdes`.
 
+## A GPU-gép kártyájának neve (0.4)
+
+A Skipwise munkalépései mutatják, hol fut egy lépés („GPU-gép · RTX 3090”). A kártya nevét a `models.yaml` `gpu_host` részébe írd (csak felirat, semmit nem állít):
+
+```yaml
+gpu_host:
+  gpu: RTX 3090
+```
+
+Utána `dwyt-airouter generate` és `systemctl restart dwyt-litellm`. A futtató (0.25-től) óránként újraolvassa. A Whisper-konténer a kártya nevét magától jelenti (dwyt-gpu: új kép kell, `docker build -t dwyt-whisper:local worker`).
+
 ## Modell-leírás a dwyt-nek (0.3)
 
 A 0.3-tól a `generate` a `litellm.yaml` minden nevéhez leírást ír (`model_info.dwyt`): mire való, melyik modell fut mögötte, helyben vagy felhőben, gondolkodással vagy anélkül, és mi válaszol, ha a GPU-gép ki van kapcsolva. A dwyt-futtató (0.7-től) ezt küldi a központnak, a Futtatók oldal ebből mutatja a modelleket.

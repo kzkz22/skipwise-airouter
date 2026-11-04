@@ -16,6 +16,7 @@ gpu_host:
   #   wait_s: 240              # ennyit vár az ébredésre
   # other_gpu_containers: []   # más GPU-s konténerek, amelyeket indítás előtt le kell állítani
   start_timeout_s: 180         # egy konténer indulása (a modell betöltése) legfeljebb ennyi
+  gpu: RTX 3090                # a kártya neve; csak felirat (a Skipwise munkalépéseinél: „GPU-gép · RTX 3090”)
 
 # A llama-server konténer (router mód: egy szerver, a presetek a models.ini-ből).
 llama_server:

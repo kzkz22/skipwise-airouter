@@ -157,3 +157,9 @@ def test_every_name_says_what_runs_behind_it(tmp_path):
     assert info["cloud/flash"]["where"] == "cloud" and info["cloud/flash"]["provider"] == "OpenRouter"
     with pytest.raises(ConfigError, match="200 karakter"):
         load(write_config(tmp_path, text.replace("Saját leírás", "x" * 201)))
+    assert "gpu" not in info["Qwen-Gnrl"]  # no card named: no label
+    # the GPU host's card, for Skipwise's step list ("GPU-gép · RTX 3090")
+    cfg = load(write_config(tmp_path, text.replace("  starter: docker\n", "  starter: docker\n  gpu: ' RTX  3090 '\n")))
+    info = {e["model_name"]: e["model_info"]["dwyt"] for e in generate.litellm(cfg)["model_list"]}
+    assert info["Qwen-Gnrl"]["gpu"] == "RTX 3090" and info["kerdes"]["gpu"] == "RTX 3090"
+    assert "gpu" not in info["cloud/flash"] and "gpu" not in info["kerdes"]["fallback"][0]

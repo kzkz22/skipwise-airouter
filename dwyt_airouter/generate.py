@@ -181,7 +181,7 @@ def describe(cfg: Config, name: str) -> dict[str, Any]:
     if model in local:
         m = local[model]
         out: dict[str, Any] = {"where": "local", "target": m.name, "target_label": _local_label(m.name),
-                               "context": m.max_input_tokens, "vision": m.vision}
+                               "context": m.max_input_tokens, "vision": m.vision, "gpu": cfg.gpu_host.gpu or None}
         own = own or m.description
     else:
         c = cloud[model]
@@ -195,7 +195,8 @@ def describe(cfg: Config, name: str) -> dict[str, Any]:
                thinking_budget=budget, fallback=[])
     for f in fallback:
         target = describe(cfg, f)
-        out["fallback"].append({k: target.get(k) for k in ("target", "target_label", "where", "provider", "thinking")}
+        out["fallback"].append({k: target.get(k) for k in ("target", "target_label", "where", "provider", "thinking",
+                                                            "gpu") if k != "gpu" or target.get(k)}
                                | {"name": f})
     return {k: v for k, v in out.items() if v is not None}
 

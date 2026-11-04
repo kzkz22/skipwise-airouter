@@ -53,6 +53,7 @@ class GpuHost:
     wake: Wake | None = None
     other_gpu_containers: list[str] = field(default_factory=list)
     start_timeout_s: int = 180
+    gpu: str = ""  # the card's name, only a label (shown in Skipwise's step list: "GPU-gép · RTX 3090")
 
 
 @dataclass
@@ -268,7 +269,8 @@ def load(path: str | Path | None = None) -> Config:
                    ssh=g.get("ssh", str, ""), unraid_url=g.get("unraid_url", str, "").rstrip("/"),
                    unraid_insecure_tls=g.get("unraid_insecure_tls", bool, False), wake=wake,
                    other_gpu_containers=[str(x) for x in g.get("other_gpu_containers", list, [])],
-                   start_timeout_s=g.get("start_timeout_s", int, 180))
+                   start_timeout_s=g.get("start_timeout_s", int, 180),
+                   gpu=" ".join(g.get("gpu", str, "").split())[:60])
     g.done()
     if starter == "docker-ssh" and not re.match(r"^[\w.-]+@[\w.-]+(:\d+)?$|^[\w.-]+$", host.ssh or ""):
         raise ConfigError("gpu_host.ssh: a docker-ssh indítóhoz felhasználó@gép kell (például root@192.168.1.20).")
