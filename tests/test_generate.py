@@ -163,3 +163,12 @@ def test_every_name_says_what_runs_behind_it(tmp_path):
     info = {e["model_name"]: e["model_info"]["dwyt"] for e in generate.litellm(cfg)["model_list"]}
     assert info["Qwen-Gnrl"]["gpu"] == "RTX 3090" and info["kerdes"]["gpu"] == "RTX 3090"
     assert "gpu" not in info["cloud/flash"] and "gpu" not in info["kerdes"]["fallback"][0]
+
+
+def test_the_version_is_the_same_everywhere():
+    import re
+    from pathlib import Path
+
+    from dwyt_airouter import __version__
+    pyproject = (Path(__file__).resolve().parent.parent / "pyproject.toml").read_text(encoding="utf-8")
+    assert re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1) == __version__
