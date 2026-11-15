@@ -80,6 +80,7 @@ class Container:
     check: str = "/health"
     title: str = ""
     models: list[ContainerModel] = field(default_factory=list)  # extra containers only
+    gpu: bool = True      # False: runs on the CPU (whisper.device: cpu) - never swapped against the GPU ones
 
 
 @dataclass
@@ -149,7 +150,7 @@ class Config:
         return {m.name: (c, m) for c in self.extra for m in c.models}
 
     def gpu_containers(self) -> list[str]:
-        return [c.container for c in self.containers()] + self.gpu_host.other_gpu_containers
+        return [c.container for c in self.containers() if c.gpu] + self.gpu_host.other_gpu_containers
 
 
 def secret(cfg: "Config", name: str) -> str:
@@ -325,6 +326,11 @@ def load(path: str | Path | None = None) -> Config:
         wr = top.sub("whisper")
         if wr.data.get("enabled", True):
             whisper = _container(wr, "whisper", "dwyt-whisper", 8766, 600, True)
+        device = wr.get("device", str, "gpu")
+        if device not in ("gpu", "cpu"):
+            raise ConfigError(f"whisper.device: gpu | cpu lehet, nem {device}.")
+        if whisper:
+            whisper.gpu = device == "gpu"
         wr.get("enabled", bool, True)
         whisper_models = [str(m) for m in wr.get("models", list, ["large-v3", "large-v3-turbo"])]
         for m in whisper_models:

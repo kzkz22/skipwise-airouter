@@ -249,3 +249,16 @@ litellm: {enabled: false}
         load(write_config(tmp_path, text))
     cfg = load(write_config(tmp_path, text.split("names:")[0] + "litellm: {enabled: false}\n"))
     assert generate.llama_swap(cfg)["models"]["vllm-27b"]["aliases"] == ["Qwen-FP8"]
+
+
+def test_whisper_on_cpu_gets_its_own_persistent_group(tmp_path):
+    cfg = load(write_config(tmp_path, BASE + VLLM.replace("models:", "models:", 1)))
+    assert "routing" not in generate.llama_swap(cfg)   # all on the GPU: llama-swap's default, one at a time
+    cfg = load(write_config(tmp_path, (BASE + VLLM).replace("whisper:\n", "whisper:\n  device: cpu\n", 1)))
+    swap = generate.llama_swap(cfg)
+    assert swap["models"]["whisper"]["name"] == "Whisper CPU worker (dwyt-whisper)"
+    assert swap["routing"] == {"router": {"use": "group", "settings": {"groups": {
+        "gpu": {"swap": True, "exclusive": True, "members": ["llama-server", "vllm-27b"]},
+        "cpu": {"swap": False, "exclusive": False, "persistent": True, "members": ["whisper"]}}}}}
+    with pytest.raises(ConfigError, match="whisper.device"):
+        load(write_config(tmp_path, BASE.replace("whisper:\n", "whisper:\n  device: npu\n", 1)))

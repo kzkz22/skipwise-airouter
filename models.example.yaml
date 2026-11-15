@@ -30,6 +30,8 @@ llama_server:
 whisper:
   container: dwyt-whisper
   port: 8766
+  # device: cpu                # processzoron fut (a konténer GPU nélkül, DEVICE=cpu): az LLM mellett, nem
+  #                            # cserélődik vele, és egy GPU-s modell betöltése sem állítja le munka közben
   models: [large-v3, large-v3-turbo]
   diarization: true            # a beszélőfelismerő modell is letöltődik (HF_TOKEN kell hozzá)
   prefetch:                    # további Hugging Face-repók előre (például a magyar igazítómodell)
