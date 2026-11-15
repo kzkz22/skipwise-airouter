@@ -56,12 +56,14 @@ def test_cpu_whisper_runs_next_to_the_gpu_containers(tmp_path, monkeypatch):
     stop, t, _ = run_in_thread(cfg, "whisper")       # the CPU worker does not stop the LLM
     assert wait_for(lambda: docker.state()["dwyt-whisper"] == "running")
     assert docker.state()["dwyt-llama"] == "running"
-    stop.set(); t.join(5)
+    stop.set()
+    t.join(5)
     docker.set({"dwyt-llama": "exited", "dwyt-whisper": "running"})
     stop, t, _ = run_in_thread(cfg, "llama-server")  # nor does the LLM stop the CPU worker
     assert wait_for(lambda: docker.state()["dwyt-llama"] == "running")
     assert docker.state()["dwyt-whisper"] == "running"
-    stop.set(); t.join(5)
+    stop.set()
+    t.join(5)
 
 
 def test_run_ends_on_sigterm_and_stop_stops_the_container_and_the_run_process(tmp_path, monkeypatch):
