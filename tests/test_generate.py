@@ -172,3 +172,80 @@ def test_the_version_is_the_same_everywhere():
     from dwyt_airouter import __version__
     pyproject = (Path(__file__).resolve().parent.parent / "pyproject.toml").read_text(encoding="utf-8")
     assert re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1) == __version__
+
+
+VLLM = """
+extra_containers:
+  - entry: vllm-27b
+    container: vllm-27b
+    port: 8000
+    ttl: 0
+    unlisted: false
+    models:
+      - name: Qwen-FP8
+        max_input_tokens: 262144
+        max_output_tokens: 32768
+        vision: true
+        thinking: true
+        chat-template-kwargs: '{"preserve_thinking": true, "reasoning_effort": "medium"}'
+"""
+
+
+def test_extra_container_models_get_aliases_and_litellm_names(tmp_path):
+    text = BASE + VLLM + """  - entry: helper
+    container: helper
+    port: 9000
+"""
+    text = text.replace("names:\n", "names:\n  - {name: kod, model: Qwen-FP8, fallback: cloud/flash}\n"
+                                    "  - {name: kod-gyors, model: Qwen-FP8, thinking: false}\n", 1)
+    cfg = load(write_config(tmp_path, text))
+    swap = generate.llama_swap(cfg)["models"]
+    assert swap["vllm-27b"]["aliases"] == ["Qwen-FP8"] and swap["vllm-27b"]["proxy"].endswith(":8000")
+    assert "ttl" not in swap["vllm-27b"] and "unlisted" not in swap["vllm-27b"]
+    assert "aliases" not in swap["helper"]  # a container without models stays as it was
+    assert swap["llama-server"]["aliases"] == ["Qwen-Gnrl", "Qwen-Code"]
+
+    lite = generate.litellm(cfg)
+    by_name = {e["model_name"]: e for e in lite["model_list"]}
+    p = by_name["Qwen-FP8"]["litellm_params"]
+    assert p["model"] == "openai/Qwen-FP8" and p["api_base"] == "http://127.0.0.1:8080/v1"
+    assert p["extra_body"] == {"chat_template_kwargs": {"preserve_thinking": True, "reasoning_effort": "medium"}}
+    assert by_name["Qwen-FP8"]["model_info"]["max_input_tokens"] == 262144
+    # a stable name switching thinking off keeps the model's own template switches
+    assert by_name["kod-gyors"]["litellm_params"]["extra_body"] == {"chat_template_kwargs": {
+        "preserve_thinking": True, "reasoning_effort": "medium", "enable_thinking": False}}
+    assert by_name["kod"]["litellm_params"]["extra_body"] == p["extra_body"]
+    assert {"kod": ["cloud/flash"]} in lite["router_settings"]["fallbacks"]
+
+    info = by_name["Qwen-FP8"]["model_info"]["dwyt"]
+    assert info == {"where": "local", "target": "Qwen-FP8", "target_label": "Qwen-FP8", "context": 262144,
+                    "vision": True, "description": "Helyi modell", "thinking": True, "fallback": []}
+    assert by_name["kod-gyors"]["model_info"]["dwyt"]["thinking"] is False
+    assert by_name["kod"]["model_info"]["dwyt"]["fallback"][0]["name"] == "cloud/flash"
+    # nothing for llama-server or the GPU host's downloads
+    assert "Qwen-FP8" not in generate.models_ini(cfg)
+    assert "Qwen-FP8" not in json.dumps(generate.downloads(cfg))
+
+
+@pytest.mark.parametrize("change, message", [
+    (("name: Qwen-FP8", "name: Qwen-Code"), "kétszer"),
+    (("chat-template-kwargs: '{\"preserve_thinking\": true, \"reasoning_effort\": \"medium\"}'",
+      "chat-template-kwargs: 'medium'"), "JSON-objektum"),
+    (("vision: true\n        thinking", "speed: 3\n        thinking"), "ismeretlen kulcs"),
+])
+def test_extra_container_model_errors(tmp_path, change, message):
+    old, new = change
+    with pytest.raises(ConfigError, match=message):
+        load(write_config(tmp_path, (BASE + VLLM).replace(old, new, 1)))
+
+
+def test_stable_names_on_container_models_need_litellm(tmp_path):
+    text = BASE.split("cloud:")[0] + VLLM + """
+names:
+  - {name: kod, model: Qwen-FP8}
+litellm: {enabled: false}
+"""
+    with pytest.raises(ConfigError, match="konténer-modellre"):
+        load(write_config(tmp_path, text))
+    cfg = load(write_config(tmp_path, text.split("names:")[0] + "litellm: {enabled: false}\n"))
+    assert generate.llama_swap(cfg)["models"]["vllm-27b"]["aliases"] == ["Qwen-FP8"]

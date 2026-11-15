@@ -79,12 +79,28 @@ names:
     thinking: true
     fallback: cloud/qwen3.8-flash
 
-# További GPU-s konténerek ugyanabban a sorban (például a régi rendszer workere).
+# További GPU-s konténerek ugyanabban a sorban (például a régi rendszer workere vagy egy vLLM-szerver).
+# A models: alatti nevek a konténer saját modellnevei: a llama-swap ezekre a nevekre ezt a konténert
+# indítja, a LiteLLM-ben is megjelennek, és a stabil nevek (names:) is mutathatnak rájuk. A konténer
+# szerverének ugyanerre a névre kell válaszolnia (vLLM: --served-model-name Qwen3.8-27B-FP8).
 # extra_containers:
 #   - entry: yt-transcribe-gpu
 #     container: yt-transcribe-gpu
 #     port: 8766
 #     ttl: 600
+#   - entry: vllm-27b
+#     container: vllm-27b
+#     port: 8000
+#     ttl: 0
+#     unlisted: false
+#     models:
+#       - name: Qwen3.8-27B-FP8
+#         max_input_tokens: 262144
+#         max_output_tokens: 32768
+#         vision: true
+#         thinking: true             # csak felirat a dwyt-nek; kikapcsolni a names: thinking: false-szal lehet
+#         chat-template-kwargs: '{"preserve_thinking": true, "reasoning_effort": "medium"}'
+#         # description: "Kódolás, 262K kontextus"
 
 litellm:
   enabled: true                # false: csak llama-swap; a stabil nevek ekkor presetek lesznek

@@ -15,7 +15,7 @@ real (faked-ML) Whisper worker; not yet run against a real GPU host. Source of t
 
 | Path | Role |
 | --- | --- |
-| `dwyt_airouter/config.py` | `models.yaml` reader with strict validation (Hungarian errors naming the key) |
+| `dwyt_airouter/config.py` | `models.yaml` reader with strict validation (Hungarian errors naming the key); `extra_containers[].models` = names served by that container (e.g. vLLM), 0.5 |
 | `dwyt_airouter/generate.py` | llama-swap.yaml, litellm.yaml (each name with `model_info.dwyt` = `describe()`: what runs behind it, for dwyt's Runners page; local names carry `gpu` = `gpu_host.gpu`, a label for the step list, 0.4), models.ini (llama-server router presets), downloads.json, ports.env |
 | `dwyt_airouter/starters.py` | Docker (local / `-H ssh://`) and Unraid GraphQL: state/start/stop of existing containers |
 | `dwyt_airouter/container.py` | llama-swap `cmd`/`cmdStop`: wake, stop other GPU containers, start, stay alive while running |
@@ -26,7 +26,9 @@ GGUF files live on the GPU host under `gguf/<owner>/<repo>/<path>` (downloads.js
 file names such as `mmproj-F16.gguf`); models.ini points there. `chat-template-kwargs` is a JSON object string.
 
 Pinned: llama-swap v266 (docs, CI `-validate`; v262 → v266 checked: same config, aliases, swaps, a 300 MB /upstream body still passes — /upstream has no body cap), LiteLLM 1.106.2 (checked against the generated config: names, model_info.dwyt, streaming, fallbacks). `llama-swap.yaml` keeps `${PID}` literal for
-llama-swap's macro. Without LiteLLM, stable names become llama-server presets (no fallback).
+llama-swap's macro. Without LiteLLM, stable names become llama-server presets (no fallback). A container model
+(`extra_containers[].models`) is an alias of its container's entry and a LiteLLM name; the container's server must
+answer to that name; without LiteLLM no stable name may point at it.
 
 Repository: kzkz22/skipwise-airouter (renamed from dwyt-airouter, decision 19.19). Only the repository name and links
 changed: commands, package names, folders, services, containers and images keep their dwyt names, because the
