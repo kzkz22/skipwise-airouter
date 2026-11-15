@@ -57,6 +57,20 @@ class GpuHost:
 
 
 @dataclass
+class ContainerModel:
+    """A model name served by an extra container (for example a vLLM server): a llama-swap alias of the
+    container's entry and a LiteLLM name. The container's own server must answer to this name
+    (vLLM: --served-model-name)."""
+    name: str
+    chat_template_kwargs: dict[str, Any] = field(default_factory=dict)
+    max_input_tokens: int | None = None
+    max_output_tokens: int | None = None
+    vision: bool = False
+    thinking: bool | None = None   # only a label (model_info.dwyt); switch it off per name with names: thinking: false
+    description: str = ""
+
+
+@dataclass
 class Container:
     entry: str            # llama-swap entry name (also the /upstream/<entry> path)
     container: str        # container name on the GPU host
@@ -65,6 +79,7 @@ class Container:
     unlisted: bool = False
     check: str = "/health"
     title: str = ""
+    models: list[ContainerModel] = field(default_factory=list)  # extra containers only
 
 
 @dataclass
@@ -129,6 +144,9 @@ class Config:
                 return c
         raise ConfigError(f"Nincs ilyen bejegyzés a models.yaml-ban: {entry} "
                           f"(van: {', '.join(c.entry for c in self.containers())})")
+
+    def container_models(self) -> dict[str, tuple[Container, ContainerModel]]:
+        return {m.name: (c, m) for c in self.extra for m in c.models}
 
     def gpu_containers(self) -> list[str]:
         return [c.container for c in self.containers()] + self.gpu_host.other_gpu_containers
@@ -213,6 +231,21 @@ def _args(data: dict, where: str) -> dict[str, Any]:
                 raise ConfigError(f"{where}.{key}: JSON-objektum kell, például '{{\"preserve_thinking\": true}}'.")
         out[key] = value
     return out
+
+
+def _template_kwargs(value: Any, where: str) -> dict[str, Any]:
+    """`chat-template-kwargs` as in llama-server presets: a JSON object string (a YAML mapping is accepted too)."""
+    if value in (None, ""):
+        return {}
+    if isinstance(value, dict):
+        return dict(value)
+    try:
+        parsed = json.loads(str(value))
+    except ValueError:
+        parsed = None
+    if not isinstance(parsed, dict):
+        raise ConfigError(f"{where}: JSON-objektum kell, például '{{\"preserve_thinking\": true}}'.")
+    return parsed
 
 
 def _description(r: _Reader) -> str:
@@ -310,7 +343,17 @@ def load(path: str | Path | None = None) -> Config:
     for i, item in enumerate(top.get("extra_containers", list, [])):
         er = _Reader(item, f"extra_containers[{i}]")
         er.get("entry", str, required=True)
-        extra.append(_container(er, "", "", 0, er.data.get("ttl", 600), True))
+        c = _container(er, "", "", 0, er.data.get("ttl", 600), True)
+        for j, mitem in enumerate(er.get("models", list, [])):
+            mr = _Reader(mitem, f"{er.where}.models[{j}]")
+            c.models.append(ContainerModel(
+                name=mr.get("name", str, required=True),
+                chat_template_kwargs=_template_kwargs(mr.get("chat-template-kwargs", (str, dict)),
+                                                      f"{mr.where}.chat-template-kwargs"),
+                max_input_tokens=mr.get("max_input_tokens", int), max_output_tokens=mr.get("max_output_tokens", int),
+                vision=mr.get("vision", bool, False), thinking=mr.get("thinking", bool), description=_description(mr)))
+            mr.done()
+        extra.append(c)
         er.done()
 
     local_models = []
@@ -374,6 +417,7 @@ def load(path: str | Path | None = None) -> Config:
 def _cross_check(cfg: Config) -> None:
     seen: dict[str, str] = {}
     for kind, name in ([("helyi modell", m.name) for m in cfg.local_models]
+                       + [("konténer-modell", m) for m in cfg.container_models()]
                        + [("felhős modell", m.name) for m in cfg.cloud_models]
                        + [("stabil név", n.name) for n in cfg.names]):
         if not NAME.match(name):
@@ -387,7 +431,8 @@ def _cross_check(cfg: Config) -> None:
     containers = [c.container for c in cfg.containers()]
     if len(set(containers)) != len(containers):
         raise ConfigError(f"Két bejegyzés ugyanazt a konténert használja: {', '.join(containers)}")
-    local = {m.name for m in cfg.local_models}
+    served = set(cfg.container_models())
+    local = {m.name for m in cfg.local_models} | served
     cloud = {m.name for m in cfg.cloud_models}
     if cfg.cloud_models and not cfg.litellm:
         raise ConfigError("Felhős modellekhez LiteLLM kell (litellm.enabled: true).")
@@ -401,3 +446,6 @@ def _cross_check(cfg: Config) -> None:
             raise ConfigError(f"names: a(z) {n.name} tartalékához LiteLLM kell (litellm.enabled: true).")
         if not cfg.litellm and n.model in cloud:
             raise ConfigError(f"names: a(z) {n.name} felhős modellre mutat; ehhez LiteLLM kell.")
+        if not cfg.litellm and n.model in served:
+            raise ConfigError(f"names: a(z) {n.name} konténer-modellre mutat ({n.model}); "
+                              "LiteLLM nélkül csak llama-server-modellre mutathat.")

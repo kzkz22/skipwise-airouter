@@ -5,6 +5,9 @@ presets of models.ini; every preset name is an alias of that one entry, so the r
 name reaches llama-server unchanged and switching presets never restarts the container. Each
 entry's cmd is `dwyt-airouter container run <entry>`, which keeps running while the container runs.
 
+Extra containers may serve model names of their own (`models:`, e.g. a vLLM server): those become
+aliases of the container's entry and LiteLLM names, and stable names may point at them.
+
 LiteLLM: local names -> llama-swap; cloud names -> the provider with the key from the env;
 stable names (auto, osszefoglalo ...) -> a target with optional thinking switch and fallbacks.
 Without LiteLLM, stable names that point to a local model become presets of their own.
@@ -102,12 +105,26 @@ def llama_swap(cfg: Config) -> dict[str, Any]:
         }
         if c is cfg.llama:
             entry["aliases"] = preset_names(cfg)
+        elif c.models:  # e.g. a vLLM server: its model names select this entry
+            entry["aliases"] = [m.name for m in c.models]
         if c.unlisted:
             entry["unlisted"] = True
         if c.ttl:
             entry["ttl"] = c.ttl
         models[c.entry] = entry
     return {"healthCheckTimeout": cfg.gpu_host.start_timeout_s + wake_s, "logLevel": "info", "models": models}
+
+
+def _with_params(base: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:
+    """base litellm_params plus a name's thinking switch; chat_template_kwargs are merged, not replaced
+    (a container model's own kwargs such as preserve_thinking stay)."""
+    out = {**base, **extra}
+    kwargs = {**(base.get("extra_body") or {}).get("chat_template_kwargs", {}),
+              **(extra.get("extra_body") or {}).get("chat_template_kwargs", {})}
+    if kwargs:
+        out["extra_body"] = {**(base.get("extra_body") or {}), **(extra.get("extra_body") or {}),
+                             "chat_template_kwargs": kwargs}
+    return out
 
 
 def _thinking_params(model: str, thinking: bool | None, local: bool) -> dict[str, Any]:
@@ -161,6 +178,9 @@ def _auto_description(name: str, target_local: bool, target: str) -> str:
 
 def _thinking_of(cfg: Config, model: str, thinking: bool | None) -> tuple[bool | None, int | None]:
     """(thinking on?, its token budget) as the name will actually run."""
+    served = cfg.container_models().get(model)
+    if served is not None:
+        return (thinking if thinking is not None else served[1].thinking), None
     local = next((m for m in cfg.local_models if m.name == model), None)
     if local is not None:
         budget = local.args.get("reasoning-budget")
@@ -175,10 +195,16 @@ def describe(cfg: Config, name: str) -> dict[str, Any]:
     """The `dwyt` block of a name's model_info: what runs behind it and what happens without the GPU host."""
     local = {m.name: m for m in cfg.local_models}
     cloud = {m.name: m for m in cfg.cloud_models}
+    served = cfg.container_models()
     stable = {n.name: n for n in cfg.names}
     n = stable.get(name)
     model, thinking, fallback, own = (n.model, n.thinking, n.fallback, n.description) if n else (name, None, [], "")
-    if model in local:
+    if model in served:
+        m = served[model][1]
+        out = {"where": "local", "target": m.name, "target_label": _local_label(m.name),
+               "context": m.max_input_tokens, "vision": m.vision, "gpu": cfg.gpu_host.gpu or None}
+        own = own or m.description
+    elif model in local:
         m = local[model]
         out: dict[str, Any] = {"where": "local", "target": m.name, "target_label": _local_label(m.name),
                                "context": m.max_input_tokens, "vision": m.vision, "gpu": cfg.gpu_host.gpu or None}
@@ -191,7 +217,7 @@ def describe(cfg: Config, name: str) -> dict[str, Any]:
         own = own or c.description
         thinking = thinking if thinking is not None else c.thinking
     on, budget = _thinking_of(cfg, model, thinking)
-    out.update(description=own or _auto_description(name, model in local, model), thinking=on,
+    out.update(description=own or _auto_description(name, model in local or model in served, model), thinking=on,
                thinking_budget=budget, fallback=[])
     for f in fallback:
         target = describe(cfg, f)
@@ -212,6 +238,14 @@ def litellm(cfg: Config) -> dict[str, Any]:
         info = _model_info(m.max_input_tokens, m.max_output_tokens, m.vision)
         params[m.name] = (p, info, True)
         entries.append({"model_name": m.name, "model_info": info, "litellm_params": p})
+    for _, m in cfg.container_models().values():  # served by an extra container (vLLM ...), via llama-swap
+        p = {"model": f"openai/{m.name}", "api_base": api_base, "api_key": "none", "timeout": 1800,
+             "stream_timeout": 600}
+        if m.chat_template_kwargs:
+            p["extra_body"] = {"chat_template_kwargs": dict(m.chat_template_kwargs)}
+        info = _model_info(m.max_input_tokens, m.max_output_tokens, m.vision)
+        params[m.name] = (p, info, True)
+        entries.append({"model_name": m.name, "model_info": info, "litellm_params": p})
     for m in cfg.cloud_models:
         p = {"model": m.model, "api_key": f"os.environ/{cfg.cloud_key_env}", "timeout": 600,
              **_thinking_params(m.model, m.thinking, local=False)}
@@ -221,7 +255,7 @@ def litellm(cfg: Config) -> dict[str, Any]:
     fallbacks = []
     for n in cfg.names:
         base, info, local = params[n.model]
-        p = {**base, **_thinking_params(base["model"], n.thinking, local)}
+        p = _with_params(base, _thinking_params(base["model"], n.thinking, local))
         entries.append({"model_name": n.name, **({"model_info": info} if info else {}), "litellm_params": p})
         if n.fallback:
             fallbacks.append({n.name: n.fallback})

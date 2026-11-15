@@ -54,6 +54,36 @@ A dwyt központjában feltett kérdésekhez a futtató a `kerdes` nevet használ
 
 Utána `dwyt-airouter generate`, `systemctl restart dwyt-litellm`, a futtatón `dwyt-runner config set llm_ask_model kerdes`.
 
+## Konténer saját modellnevei, például vLLM (0.5)
+
+Egy `extra_containers` konténerhez (például egy vLLM-szerverhez) a `models:` alatt modellneveket lehet
+megadni. A `generate` ezekből a llama-swapban álneveket ír (a névre ez a konténer indul), a LiteLLM-ben
+bejegyzést (kontextus, kép, `chat-template-kwargs`, `model_info.dwyt` leírás), és a `names:` stabil
+nevei is mutathatnak rájuk (tartalékkal, gondolkodás ki/be; a modell saját `chat-template-kwargs`-a
+ilyenkor is megmarad). A konténer szerverének ugyanerre a névre kell válaszolnia
+(vLLM: `--served-model-name`). Minta: `models.example.yaml`, `extra_containers`.
+
+```yaml
+extra_containers:
+  - entry: vllm-27b
+    container: vllm-27b
+    port: 8000
+    ttl: 0
+    unlisted: false
+    models:
+      - name: Qwen3.8-27B-FP8
+        max_input_tokens: 262144
+        max_output_tokens: 32768
+        vision: true
+        thinking: true
+        chat-template-kwargs: '{"preserve_thinking": true, "reasoning_effort": "medium"}'
+```
+
+1. A program frissítése (fent), majd `dwyt-airouter generate` és `systemctl restart dwyt-litellm`.
+2. Ha korábban kézzel írtál ilyen neveket a `litellm.yaml`-ba, azokra már nincs szükség: a `generate` megírja őket.
+
+LiteLLM nélkül (`litellm.enabled: false`) a konténer nevei csak llama-swap-álnevek; stabil név nem mutathat rájuk.
+
 ## A GPU-gép kártyájának neve (0.4)
 
 A Skipwise munkalépései mutatják, hol fut egy lépés („GPU-gép · RTX 3090”). A kártya nevét a `models.yaml` `gpu_host` részébe írd (csak felirat, semmit nem állít):
