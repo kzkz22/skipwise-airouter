@@ -54,6 +54,20 @@ A dwyt központjában feltett kérdésekhez a futtató a `kerdes` nevet használ
 
 Utána `dwyt-airouter generate`, `systemctl restart dwyt-litellm`, a futtatón `dwyt-runner config set llm_ask_model kerdes`.
 
+## Whisper a processzoron (0.6)
+
+Ha a GPU-t állandóan egy nagy LLM foglalja (például vLLM két kártyán), a Whisper-worker futhat a
+processzoron. Ekkor nem cserélődik az LLM-mel: egy átírás nem állítja le az LLM-et, és egy GPU-s modell
+betöltése sem szakítja félbe az átírást (a llama-swapban a Whisper külön, tartós csoportba kerül).
+
+1. A GPU-gépen a `dwyt-whisper` konténer GPU nélkül, `DEVICE=cpu` változóval (skipwise-gpu, telepítési útmutató, „Whisper a processzoron”).
+2. A `models.yaml`-ban:
+   ```yaml
+   whisper:
+     device: cpu
+   ```
+3. A program frissítése (fent), majd `dwyt-airouter generate`. A llama-swap magától újratölti a beállítást.
+
 ## Konténer saját modellnevei, például vLLM (0.5)
 
 Egy `extra_containers` konténerhez (például egy vLLM-szerverhez) a `models:` alatt modellneveket lehet

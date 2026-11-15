@@ -96,7 +96,8 @@ def llama_swap(cfg: Config) -> dict[str, Any]:
     for c in cfg.containers():
         entry: dict[str, Any] = {
             "name": c.title or (f"llama-server ({c.container})" if c is cfg.llama else
-                                f"Whisper GPU worker ({c.container})" if c is cfg.whisper else c.container),
+                                f"Whisper {'GPU' if c.gpu else 'CPU'} worker ({c.container})" if c is cfg.whisper
+                                else c.container),
             "cmd": _cmd(cfg, "run", c.entry),
             "cmdStop": _cmd(cfg, "stop", c.entry),
             "proxy": f"http://{cfg.gpu_host.address}:{c.port}",
@@ -112,7 +113,17 @@ def llama_swap(cfg: Config) -> dict[str, Any]:
         if c.ttl:
             entry["ttl"] = c.ttl
         models[c.entry] = entry
-    return {"healthCheckTimeout": cfg.gpu_host.start_timeout_s + wake_s, "logLevel": "info", "models": models}
+    out: dict[str, Any] = {"healthCheckTimeout": cfg.gpu_host.start_timeout_s + wake_s, "logLevel": "info",
+                           "models": models}
+    cpu = [c.entry for c in cfg.containers() if not c.gpu]
+    if cpu:
+        # A CPU container (whisper.device: cpu) runs next to the GPU ones: the GPU entries still swap one at a
+        # time, and loading one never unloads a CPU entry (persistent), so a Whisper job is not cut off.
+        out["routing"] = {"router": {"use": "group", "settings": {"groups": {
+            "gpu": {"swap": True, "exclusive": True, "members": [c.entry for c in cfg.containers() if c.gpu]},
+            "cpu": {"swap": False, "exclusive": False, "persistent": True, "members": cpu},
+        }}}}
+    return out
 
 
 def _with_params(base: dict[str, Any], extra: dict[str, Any]) -> dict[str, Any]:

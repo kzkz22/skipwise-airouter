@@ -1,6 +1,7 @@
 """What llama-swap runs for a GPU container (its `cmd` and `cmdStop`).
 
-  run ENTRY        wake the GPU host if needed, stop the other GPU containers, start ENTRY's
+  run ENTRY        wake the GPU host if needed, stop the other GPU containers (not for a CPU
+                   container such as whisper.device: cpu), start ENTRY's
                    container, then keep running while it runs. llama-swap treats this process
                    as the model: when it exits, the model counts as stopped.
   stop ENTRY [PID] stop the container, wait until it has stopped, then end the `run` process.
@@ -24,7 +25,8 @@ STOP_WAIT_S = 60
 
 
 def run(cfg: Config, entry: str, stop_event: threading.Event | None = None) -> int:
-    target = cfg.by_entry(entry).container
+    own = cfg.by_entry(entry)
+    target = own.container
     starter = starter_for(cfg)
     stop_event = stop_event or threading.Event()
     if threading.current_thread() is threading.main_thread():
@@ -49,7 +51,7 @@ def run(cfg: Config, entry: str, stop_event: threading.Event | None = None) -> i
                 if time.monotonic() > deadline:
                     break
                 stop_event.wait(3)
-        for other in cfg.gpu_containers():
+        for other in (cfg.gpu_containers() if own.gpu else []):
             if other == target:
                 continue
             if starter.state(other) == "running":
@@ -90,7 +92,8 @@ def run(cfg: Config, entry: str, stop_event: threading.Event | None = None) -> i
 
 
 def stop(cfg: Config, entry: str, pid: int | None) -> int:
-    target = cfg.by_entry(entry).container
+    own = cfg.by_entry(entry)
+    target = own.container
     starter = starter_for(cfg)
     code = 0
     try:
