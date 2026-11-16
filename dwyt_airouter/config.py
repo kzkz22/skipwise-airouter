@@ -67,6 +67,7 @@ class ContainerModel:
     max_output_tokens: int | None = None
     vision: bool = False
     thinking: bool | None = None   # only a label (model_info.dwyt); switch it off per name with names: thinking: false
+    thinking_budget: int | None = None  # vLLM thinking_token_budget: thinking is ended after this many tokens
     description: str = ""
 
 
@@ -357,7 +358,10 @@ def load(path: str | Path | None = None) -> Config:
                 chat_template_kwargs=_template_kwargs(mr.get("chat-template-kwargs", (str, dict)),
                                                       f"{mr.where}.chat-template-kwargs"),
                 max_input_tokens=mr.get("max_input_tokens", int), max_output_tokens=mr.get("max_output_tokens", int),
-                vision=mr.get("vision", bool, False), thinking=mr.get("thinking", bool), description=_description(mr)))
+                vision=mr.get("vision", bool, False), thinking=mr.get("thinking", bool),
+                thinking_budget=mr.get("thinking_budget", int), description=_description(mr)))
+            if c.models[-1].thinking_budget is not None and c.models[-1].thinking_budget < 1:
+                raise ConfigError(f"{mr.where}.thinking_budget: pozitív egész szám kell (token).")
             mr.done()
         extra.append(c)
         er.done()

@@ -54,6 +54,21 @@ A dwyt központjában feltett kérdésekhez a futtató a `kerdes` nevet használ
 
 Utána `dwyt-airouter generate`, `systemctl restart dwyt-litellm`, a futtatón `dwyt-runner config set llm_ask_model kerdes`.
 
+## Gondolkodási keret vLLM-modellekhez (0.6.1)
+
+A konténer-modellekhez (`extra_containers` → `models:`) megadható a `thinking_budget` (token). A LiteLLM ezt
+minden kéréshez `thinking_token_budget`-ként küldi, és a vLLM ennyi gondolkodó token után lezárja a gondolkodást,
+így a modell válaszol. Ez a llama-server `reasoning-budget` beállításának megfelelője: nélküle egy gondolkodási
+hurokba került modell a teljes kontextusig (több százezer tokenig) is gondolkodhat.
+
+```yaml
+    models:
+      - name: Qwen3.8-27B-FP8
+        thinking_budget: 16384
+```
+
+Frissítés után `dwyt-airouter generate` és `systemctl restart dwyt-litellm`.
+
 ## Whisper a processzoron (0.6)
 
 Ha a GPU-t állandóan egy nagy LLM foglalja (például vLLM két kártyán), a Whisper-worker futhat a

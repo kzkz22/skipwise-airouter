@@ -102,6 +102,7 @@ names:
 #         vision: true
 #         thinking: true             # csak felirat a dwyt-nek; kikapcsolni a names: thinking: false-szal lehet
 #         chat-template-kwargs: '{"preserve_thinking": true, "reasoning_effort": "medium"}'
+#         thinking_budget: 16384      # vLLM: ennyi gondolkodó token után a modellnek válaszolnia kell (hurok ellen)
 #         # description: "Kódolás, 262K kontextus"
 
 litellm:

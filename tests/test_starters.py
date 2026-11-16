@@ -1,4 +1,5 @@
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -77,7 +78,9 @@ def test_run_ends_on_sigterm_and_stop_stops_the_container_and_the_run_process(tm
     code = subprocess.run([sys.executable, "-m", "dwyt_airouter.cli", "--config", str(cfg_path), "container", "stop",
                            "llama-server", str(proc.pid)], env=env, timeout=30).returncode
     assert code == 0 and docker.state()["dwyt-llama"] == "exited"
-    assert proc.wait(timeout=10) == 0
+    # the run process ends by itself once the container stopped (exit 0); a SIGTERM that lands while its interpreter
+    # is already shutting down (Python then restores the default handler) ends it with -SIGTERM: both are a clean end
+    assert proc.wait(timeout=10) in (0, -signal.SIGTERM)
 
 
 def test_missing_container_fails(tmp_path, monkeypatch):

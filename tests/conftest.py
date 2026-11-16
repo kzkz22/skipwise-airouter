@@ -28,7 +28,9 @@ if name not in state:
 if args[0] == "inspect":
     print(state[name]); sys.exit(0)
 state[name] = "running" if args[0] == "start" else "exited"
-json.dump(state, open(state_file, "w"))
+tmp = state_file + "." + str(os.getpid())
+json.dump(state, open(tmp, "w"))
+os.replace(tmp, state_file)  # atomic: a reader never sees a half-written (empty) state
 print(name)
 '''
 
@@ -46,7 +48,9 @@ class FakeDocker:
         monkeypatch.setenv("FAKE_DOCKER_STATE", str(self.state_file))
 
     def set(self, containers: dict[str, str]) -> None:
-        self.state_file.write_text(json.dumps(containers))
+        tmp = self.state_file.with_suffix(".tmp")
+        tmp.write_text(json.dumps(containers))
+        tmp.replace(self.state_file)  # atomic, like the fake docker's own writes
 
     def state(self) -> dict[str, str]:
         return json.loads(self.state_file.read_text())
