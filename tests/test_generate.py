@@ -262,3 +262,16 @@ def test_whisper_on_cpu_gets_its_own_persistent_group(tmp_path):
         "cpu": {"swap": False, "exclusive": False, "persistent": True, "members": ["whisper"]}}}}}
     with pytest.raises(ConfigError, match="whisper.device"):
         load(write_config(tmp_path, BASE.replace("whisper:\n", "whisper:\n  device: npu\n", 1)))
+
+
+def test_container_model_thinking_budget_rides_in_extra_body(tmp_path):
+    text = (BASE + VLLM).replace("        thinking: true\n", "        thinking: true\n        thinking_budget: 16384\n", 1)
+    text = text.replace("names:\n", "names:\n  - {name: kod-gyors, model: Qwen-FP8, thinking: false}\n", 1)
+    cfg = load(write_config(tmp_path, text))
+    by_name = {e["model_name"]: e for e in generate.litellm(cfg)["model_list"]}
+    body = by_name["Qwen-FP8"]["litellm_params"]["extra_body"]
+    assert body["thinking_token_budget"] == 16384 and body["chat_template_kwargs"]["reasoning_effort"] == "medium"
+    fast = by_name["kod-gyors"]["litellm_params"]["extra_body"]  # a stable name keeps it next to its switch
+    assert fast["thinking_token_budget"] == 16384 and fast["chat_template_kwargs"]["enable_thinking"] is False
+    with pytest.raises(ConfigError, match="thinking_budget"):
+        load(write_config(tmp_path, text.replace("thinking_budget: 16384", "thinking_budget: 0")))

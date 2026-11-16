@@ -28,7 +28,7 @@ file names such as `mmproj-F16.gguf`); models.ini points there. `chat-template-k
 Pinned: llama-swap v266 (docs, CI `-validate`; v262 → v266 checked: same config, aliases, swaps, a 300 MB /upstream body still passes — /upstream has no body cap), LiteLLM 1.106.2 (checked against the generated config: names, model_info.dwyt, streaming, fallbacks). `llama-swap.yaml` keeps `${PID}` literal for
 llama-swap's macro. Without LiteLLM, stable names become llama-server presets (no fallback). A container model
 (`extra_containers[].models`) is an alias of its container's entry and a LiteLLM name; the container's server must
-answer to that name; without LiteLLM no stable name may point at it. `whisper.device: cpu` (0.6): the worker is
+answer to that name; without LiteLLM no stable name may point at it. `thinking_budget` (0.6.1) → LiteLLM `extra_body.thinking_token_budget` (vLLM ends the thinking there). `whisper.device: cpu` (0.6): the worker is
 not a GPU container (not stopped by, and does not stop, the GPU ones); llama-swap gets `routing` groups: `gpu`
 (swap, exclusive) and `cpu` (persistent), so loading a GPU model never cuts a Whisper job off.
 

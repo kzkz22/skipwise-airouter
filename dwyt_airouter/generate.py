@@ -254,6 +254,8 @@ def litellm(cfg: Config) -> dict[str, Any]:
              "stream_timeout": 600}
         if m.chat_template_kwargs:
             p["extra_body"] = {"chat_template_kwargs": dict(m.chat_template_kwargs)}
+        if m.thinking_budget:  # vLLM ends the thinking there (a looping model otherwise thinks until the context ends)
+            p.setdefault("extra_body", {})["thinking_token_budget"] = m.thinking_budget
         info = _model_info(m.max_input_tokens, m.max_output_tokens, m.vision)
         params[m.name] = (p, info, True)
         entries.append({"model_name": m.name, "model_info": info, "litellm_params": p})
